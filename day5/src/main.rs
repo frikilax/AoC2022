@@ -1,38 +1,68 @@
 use std::fs;
-use std::cmp;
 
-fn rotate_matrix_90_counter_clockwise<T>(matrix: &mut Vec<Vec<T>>)
-where T: Clone {
-    let rows_len = matrix.len();
-    let cols_len = matrix[0].len();
-
-    let width = cmp::max(rows_len, cols_len);
-    let mut padded = vec![vec![None; width]; width];
-
-    for i in 0..rows_len {
-        for j in 0..cols_len {
-            padded[i][j] = Some(matrix[i][j].clone());
+fn parse_table_input(input: &Vec<Vec<char>>) -> Vec<Vec<char>> {
+    let mut output: Vec<Vec<char>> = Vec::new();
+    
+    let last_line = & input[input.len() - 1];
+    for (i, character) in last_line.iter().enumerate() {
+        if *character == ' ' {
+            continue;
+        } else {
+            let index = character.to_digit(10).unwrap();
+            let index: usize = usize::try_from(index).unwrap();
+            output.resize(index, Vec::new());
+            for line in input.iter().rev() {
+                if line[i] != ' ' {
+                    output[index - 1].push(line[i]);
+                }
+            }
         }
     }
 
-    for i in 0..(width/2 - 1) {
-        for j in i..(width - i) {
-            let temp = padded[i][j];
-            padded[i][j] = padded[j][width - i - 1];
-            padded[j][width - i - 1] = padded[width - i - 1][width - j - 1];
-            padded[width - i - 1][width - j - 1] = padded[width - j - 1][i];
-            padded[width - j - 1][i] = temp;
-        }
+    output
+}
+
+fn parse_action_input(input: &mut Vec<&str>) -> Vec<(u32, usize, usize)> {
+    let mut output: Vec<(u32, usize, usize)> = Vec::new();
+
+    for line in input {
+        let mut words = line.split(' ');
+        let quantity: u32 = words.nth(1).unwrap().parse().unwrap();
+        let row_init: usize = words.nth(1).unwrap().parse().unwrap();
+        let row_end: usize = words.nth(1).unwrap().parse().unwrap();
+        output.push((quantity, row_init, row_end));
+    }
+
+    output
+}
+
+
+fn cratemover_9000(container: &mut [Vec<char>], action: (u32, usize, usize)) {
+    for i in 0..action.0 {
+        let value = container[action.1 - 1].pop().unwrap();
+        container[action.2 - 1].push(value);
     }
 }
+
+
+fn cratemover_9001(container: &mut [Vec<char>], action: (u32, usize, usize)) {
+    let mut bundle: Vec<char>  = Vec::new();
+    for i in 0..action.0 {
+        let value = container[action.1 - 1].pop().unwrap();
+        bundle.push(value);
+    }
+
+    bundle.reverse();
+
+    container[action.2 - 1].append(&mut bundle);
+}
+
 
 fn main() {
     let contents = fs::read_to_string("./input").unwrap();
     let lines: Vec<&str> = contents.split('\n').collect();
 
-    // let mut table_reversed: Vec<&str> = Vec::new();
-    let mut table_reversed: Vec<Vec<char>> = Vec::new();
-    let mut table: Vec<&str> = Vec::new();
+    let mut table_input: Vec<Vec<char>> = Vec::new();
     let mut instructions: Vec<&str> = Vec::new();
     let mut table_finished: bool = false;
 
@@ -42,20 +72,31 @@ fn main() {
             continue;
         }
         if ! table_finished {
-            table_reversed.push(line.chars().collect());
+            table_input.push(line.chars().collect());
         } else {
             instructions.push(line);
         }
     }
 
-    // let filtered: Vec<&str> = table_reversed.last().unwrap().split(' ').filter(|x| x.len() > 0).collect();
-    // let columns: Vec<&str> = table_reversed.last().unwrap().split(' ').collect();
-    // let columns2: Vec<&str> = table_reversed[table_reversed.len() - 2].split(' ').collect();
+    let mut table1 = parse_table_input(&table_input);
+    let mut table2 = parse_table_input(&table_input);
 
-    rotate_matrix_90_counter_clockwise(&mut table_reversed);
-    // println!("table_reversed: {table_reversed:?}");
-    // println!("instructions: {instructions:?}");
-    // println!("filtered: {filtered:?}");
-    // println!("columns: {columns:?}");
-    // println!("columns2: {columns2:?}");
+    let actions = parse_action_input(&mut instructions);
+
+    for action in actions {
+        cratemover_9000(&mut table1, action);
+        cratemover_9001(&mut table2, action);
+    }
+
+    let mut result1 : String = String::new();
+    let mut result2 : String = String::new();
+    for line in table1 {
+        result1.push(*line.last().unwrap());
+    }
+    for line in table2 {
+        result2.push(*line.last().unwrap());
+    }
+
+    println!("(step 1) top crates are {result1}");
+    println!("(step 2) top crates are {result2}");
 }
